@@ -1,0 +1,320 @@
+#!/usr/bin/env ruby
+require 'thor'
+require_relative '../lib/aider_ruby'
+
+class AiderRubyCLI < Thor
+  desc 'execute MESSAGE', 'Execute aider with a message'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  option :dry_run, type: :boolean, desc: 'Dry run mode'
+  option :yes_always, type: :boolean, desc: 'Always say yes'
+  option :conventions, desc: 'Conventions file path'
+  option :edit_format, desc: 'Edit format (whole, diff, diff-fenced)'
+  option :reasoning_effort, desc: 'Reasoning effort (low, medium, high)'
+  option :thinking_tokens, desc: 'Thinking tokens budget'
+  option :use_temperature, type: :boolean, desc: 'Use temperature sampling'
+  option :use_system_prompt, type: :boolean, desc: 'Use system prompt'
+  option :use_repo_map, type: :boolean, desc: 'Use repository map'
+  def execute(message)
+    client = create_client
+    result = client.execute(message, cli_options)
+    puts result
+  end
+
+  desc 'interactive', 'Start aider in interactive mode'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def interactive
+    client = create_client
+    client.interactive(cli_options)
+  end
+
+  desc 'from_file MESSAGE_FILE', 'Execute aider with a message file'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def from_file(message_file)
+    client = create_client
+    result = client.execute_from_file(message_file, cli_options)
+    puts result
+  end
+
+  desc 'apply FILE', 'Apply changes from a file'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def apply(file)
+    client = create_client
+    result = client.apply_changes(file, cli_options)
+    puts result
+  end
+
+  desc 'repo_map', 'Show repository map'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  def repo_map
+    client = create_client
+    result = client.show_repo_map(cli_options)
+    puts result
+  end
+
+  desc 'prompts', 'Show system prompts'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  def prompts
+    client = create_client
+    result = client.show_prompts(cli_options)
+    puts result
+  end
+
+  desc 'models [PROVIDER]', 'List available models'
+  def models(provider = nil)
+    if provider
+      models = AiderRuby::Models.list_models(provider)
+      puts "Models for #{provider}:"
+      models.each { |model| puts "  - #{model}" }
+    else
+      puts 'Available providers:'
+      AiderRuby::Models.list_providers.each do |prov|
+        puts "  #{prov}:"
+        AiderRuby::Models.list_models(prov).each { |model| puts "    - #{model}" }
+      end
+    end
+  end
+
+  desc 'model_info MODEL', 'Show information about a model'
+  def model_info(model)
+    info = AiderRuby::Models.model_info(model)
+    if info
+      puts "Model: #{info[:name]}"
+      puts "Provider: #{info[:provider]}"
+      puts "Reasoning: #{info[:reasoning]}"
+      puts "Vision: #{info[:vision]}"
+      puts "Context Window: #{info[:context_window]} tokens"
+      puts 'Cost per 1M tokens:'
+      puts "  Input: $#{info[:cost_per_token][:input]}"
+      puts "  Output: $#{info[:cost_per_token][:output]}"
+    else
+      puts "Model '#{model}' not found"
+    end
+  end
+
+  desc 'recommended', 'Show recommended models'
+  def recommended
+    puts 'Recommended models:'
+    AiderRuby::Models.recommended_models.each do |category, model|
+      puts "  #{category.to_s.gsub('_', ' ').capitalize}: #{model}"
+    end
+  end
+
+  desc 'check_update', 'Check for aider updates'
+  def check_update
+    client = create_client
+    result = client.check_update
+    puts result
+  end
+
+  desc 'upgrade', 'Upgrade aider'
+  def upgrade
+    client = create_client
+    result = client.upgrade
+    puts result
+  end
+
+  desc 'config', 'Show current configuration'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  def config
+    client = create_client
+    puts 'Current configuration:'
+    puts JSON.pretty_generate(client.config.to_h)
+  end
+
+  desc 'task TYPE DESCRIPTION', 'Execute a specific type of task'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def task(type, description)
+    client = create_client
+    executor = AiderRuby::TaskExecutor.new(client)
+
+    case type
+    when 'coding'
+      result = executor.execute_coding_task(description, options[:files] || [], cli_options)
+    when 'refactoring'
+      result = executor.execute_refactoring_task(description, options[:files] || [], cli_options)
+    when 'debugging'
+      result = executor.execute_debugging_task(description, options[:files] || [], cli_options)
+    when 'documentation'
+      result = executor.execute_documentation_task(description, options[:files] || [], cli_options)
+    when 'test_generation'
+      result = executor.execute_test_generation_task(description, options[:files] || [], cli_options)
+    else
+      puts "Unknown task type: #{type}"
+      puts 'Available types: coding, refactoring, debugging, documentation, test_generation'
+      exit 1
+    end
+
+    puts result
+  end
+
+  desc 'history', 'Show task history'
+  option :type, desc: 'Filter by task type'
+  option :status, desc: 'Filter by status'
+  option :since, desc: 'Filter by date (YYYY-MM-DD)'
+  def history
+    client = create_client
+    executor = AiderRuby::TaskExecutor.new(client)
+
+    filter = {}
+    filter[:type] = options[:type].to_sym if options[:type]
+    filter[:status] = options[:status].to_sym if options[:status]
+    filter[:since] = Date.parse(options[:since]) if options[:since]
+
+    tasks = executor.get_task_history(filter)
+
+    if tasks.empty?
+      puts 'No tasks found'
+    else
+      tasks.each do |task|
+        puts "ID: #{task[:id]}"
+        puts "Type: #{task[:type]}"
+        puts "Status: #{task[:status]}"
+        puts "Description: #{task[:description]}"
+        puts "Created: #{task[:created_at]}"
+        puts '---'
+      end
+    end
+  end
+
+  desc 'version', 'Show version information'
+  def version
+    puts "AiderRuby version: #{AiderRuby::VERSION}"
+  end
+  
+  desc 'conventions FILE', 'Load coding conventions from a file'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def conventions(file)
+    client = create_client
+    client.conventions_file(file)
+    puts "Conventions file '#{file}' loaded successfully"
+  end
+  
+  desc 'edit_format FORMAT', 'Set edit format (whole, diff, diff-fenced)'
+  option :model, aliases: :m, desc: 'Model to use'
+  option :files, aliases: :f, type: :array, desc: 'Files to edit'
+  option :read, aliases: :r, type: :array, desc: 'Read-only files'
+  option :config, aliases: :c, desc: 'Config file path'
+  option :env_file, desc: 'Environment file path'
+  option :verbose, aliases: :v, type: :boolean, desc: 'Verbose output'
+  def edit_format(format)
+    client = create_client
+    
+    case format
+    when 'whole'
+      client.edit_format_whole(true)
+    when 'diff'
+      client.edit_format_diff(true)
+    when 'diff-fenced'
+      client.edit_format_diff_fenced(true)
+    else
+      puts "Unknown edit format: #{format}"
+      puts 'Available formats: whole, diff, diff-fenced'
+      exit 1
+    end
+    
+    puts "Edit format set to: #{format}"
+  end
+  
+  desc 'reasoning_settings', 'Show reasoning model settings'
+  def reasoning_settings
+    puts 'Reasoning Model Settings:'
+    puts '  reasoning_effort: low, medium, high'
+    puts '  thinking_tokens: number of tokens (e.g., 1000, 1k, 8k)'
+    puts '  reasoning_tag: XML tag for reasoning output (e.g., think)'
+    puts ''
+    puts 'Example usage:'
+    puts '  aider-ruby execute "task" --reasoning-effort high --thinking-tokens 8k'
+  end
+
+  private
+
+  def create_client
+    client_options = {}
+
+    # Load config file if specified
+    AiderRuby::Config::Configuration.load_from_file(options[:config]) if options[:config]
+
+    # Load env file if specified
+    AiderRuby::Config::Configuration.load_from_env_file(options[:env_file]) if options[:env_file]
+
+    # Set model if specified
+    client_options[:model] = options[:model] if options[:model]
+
+    client = AiderRuby::Client::Client.new(client_options)
+
+    # Add files
+    (options[:files] || []).each { |file| client.add_file(file) }
+    (options[:read] || []).each { |file| client.add_read_only_file(file) }
+
+    # Set conventions if specified
+    client.conventions_file(options[:conventions]) if options[:conventions]
+
+    # Set edit format if specified
+    case options[:edit_format]
+    when 'whole'
+      client.edit_format_whole(true)
+    when 'diff'
+      client.edit_format_diff(true)
+    when 'diff-fenced'
+      client.edit_format_diff_fenced(true)
+    end
+
+    # Set reasoning settings if specified
+    client.reasoning_effort(options[:reasoning_effort]) if options[:reasoning_effort]
+    client.thinking_tokens(options[:thinking_tokens]) if options[:thinking_tokens]
+
+    # Set advanced model settings if specified
+    client.use_temperature(options[:use_temperature]) if options.key?(:use_temperature)
+    client.use_system_prompt(options[:use_system_prompt]) if options.key?(:use_system_prompt)
+    client.use_repo_map(options[:use_repo_map]) if options.key?(:use_repo_map)
+
+    client
+  end
+
+  def cli_options
+    {
+      config_file: options[:config],
+      env_file: options[:env_file],
+      verbose: options[:verbose],
+      dry_run: options[:dry_run],
+      yes_always: options[:yes_always]
+    }.compact
+  end
+end
+
+AiderRubyCLI.start(ARGV)

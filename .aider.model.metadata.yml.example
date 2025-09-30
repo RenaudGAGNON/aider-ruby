@@ -1,0 +1,162 @@
+# Model metadata for AiderRuby
+# This file can be used with --model-metadata-file
+
+# Model metadata including capabilities and settings
+
+- name: gpt-4o
+  provider: openai
+  context_window: 128000
+  capabilities:
+    - vision
+    - reasoning
+    - coding
+  accepts_settings:
+    - reasoning_effort
+    - thinking_tokens
+  cost_per_token:
+    input: 5.0
+    output: 15.0
+
+- name: o1-preview
+  provider: openai
+  context_window: 200000
+  capabilities:
+    - reasoning
+    - coding
+  accepts_settings:
+    - reasoning_effort
+  cost_per_token:
+    input: 15.0
+    output: 60.0
+
+- name: o1-mini
+  provider: openai
+  context_window: 200000
+  capabilities:
+    - reasoning
+    - coding
+  accepts_settings:
+    - reasoning_effort
+  cost_per_token:
+    input: 3.0
+    output: 12.0
+
+- name: claude-3-5-sonnet-20241022
+  provider: anthropic
+  context_window: 200000
+  capabilities:
+    - vision
+    - reasoning
+    - coding
+  accepts_settings:
+    - thinking_tokens
+  cost_per_token:
+    input: 3.0
+    output: 15.0
+
+- name: claude-3-5-haiku-20241022
+  provider: anthropic
+  context_window: 200000
+  capabilities:
+    - vision
+    - reasoning
+    - coding
+  accepts_settings:
+    - thinking_tokens
+  cost_per_token:
+    input: 0.8
+    output: 4.0
+
+- name: gemini-1.5-pro
+  provider: google
+  context_window: 1000000
+  capabilities:
+    - vision
+    - reasoning
+    - coding
+  cost_per_token:
+    input: 1.25
+    output: 5.0
+
+- name: gemini-1.5-flash
+  provider: google
+  context_window: 1000000
+  capabilities:
+    - vision
+    - reasoning
+    - coding
+  cost_per_token:
+    input: 0.075
+    output: 0.3
+
+- name: llama-3.1-70b-versatile
+  provider: groq
+  context_window: 128000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.59
+    output: 0.79
+
+- name: mixtral-8x7b-32768
+  provider: groq
+  context_window: 32768
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.27
+    output: 0.27
+
+- name: deepseek-chat
+  provider: deepseek
+  context_window: 64000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.14
+    output: 0.28
+
+- name: deepseek-coder
+  provider: deepseek
+  context_window: 64000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.14
+    output: 0.28
+
+- name: grok-beta
+  provider: xai
+  context_window: 128000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.01
+    output: 0.01
+
+- name: command-r-plus
+  provider: cohere
+  context_window: 128000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 3.0
+    output: 15.0
+
+- name: command-r
+  provider: cohere
+  context_window: 128000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.5
+    output: 1.5
+
+- name: command-light
+  provider: cohere
+  context_window: 100000
+  capabilities:
+    - coding
+  cost_per_token:
+    input: 0.3
+    output: 0.3

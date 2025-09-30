@@ -1,0 +1,133 @@
+# Configuration example for AiderRuby
+# Copy this file to config/aider.yml and customize as needed
+
+# Main model to use
+model: claude-3-5-sonnet-20241022
+
+# API Keys (use environment variables for security)
+openai_api_key: ${OPENAI_API_KEY}
+anthropic_api_key: ${ANTHROPIC_API_KEY}
+
+# Model settings
+reasoning_effort: medium
+thinking_tokens: 1000
+verify_ssl: true
+timeout: 60
+edit_format: diff
+architect: false
+auto_accept_architect: false
+show_model_warnings: true
+check_model_accepts_settings: true
+max_chat_history_tokens: 10000
+
+# Advanced model settings
+use_temperature: true
+use_system_prompt: true
+use_repo_map: true
+extra_params: {}
+model_settings_file: .aider.model.settings.yml
+model_metadata_file: .aider.model.metadata.yml
+reasoning_tag: think
+weak_model_name: gpt-4o-mini
+editor_model_name: gpt-4o
+
+# Edit formats
+edit_format_whole: false
+edit_format_diff: true
+edit_format_diff_fenced: false
+editor_edit_format_whole: false
+editor_edit_format_diff: true
+editor_edit_format_diff_fenced: false
+
+# Conventions and coding standards
+conventions_file: CONVENTIONS.md
+read_files: []
+
+# Cache settings
+cache_prompts: true
+cache_keepalive_pings: 30
+
+# Repomap settings
+map_tokens: 1000
+map_refresh: 30
+map_multiplier_no_files: 2.0
+
+# History files
+input_history_file: .aider/input_history.txt
+chat_history_file: .aider/chat_history.txt
+restore_chat_history: true
+llm_history_file: .aider/llm_history.txt
+
+# Output settings
+dark_mode: true
+light_mode: false
+pretty: true
+stream: true
+user_input_color: blue
+tool_output_color: green
+tool_error_color: red
+tool_warning_color: yellow
+assistant_output_color: cyan
+completion_menu_color: white
+completion_menu_bg_color: blue
+completion_menu_current_color: black
+completion_menu_current_bg_color: white
+code_theme: monokai
+show_diffs: true
+
+# Git settings
+git: true
+gitignore: true
+add_gitignore_files: true
+aiderignore: .aiderignore
+subtree_only: false
+auto_commits: true
+dirty_commits: false
+attribute_author: true
+attribute_committer: true
+attribute_commit_message_author: true
+attribute_commit_message_committer: true
+attribute_co_authored_by: true
+git_commit_verify: true
+commit: true
+commit_prompt: "Auto-commit: {message}"
+dry_run: false
+skip_sanity_check_repo: false
+watch_files: false
+
+# Fixing and committing
+lint: true
+lint_cmd: "rubocop"
+auto_lint: true
+test_cmd: "rspec"
+auto_test: true
+test: true
+
+# Analytics
+analytics: false
+analytics_log: .aider/analytics.log
+analytics_disable: false
+analytics_posthog_host: https://app.posthog.com
+analytics_posthog_project_api_key: ${POSTHOG_API_KEY}
+
+# Voice settings
+voice_format: wav
+voice_language: en
+voice_input_device: default
+
+# Other settings
+disable_playwright: false
+vim: false
+chat_language: fr
+commit_language: fr
+yes_always: false
+verbose: false
+encoding: utf-8
+line_endings: platform
+suggest_shell_commands: true
+fancy_input: true
+multiline: false
+notifications: false
+notifications_command: "osascript -e 'display notification \"Aider response ready\"'"
+detect_urls: true
+editor: vim

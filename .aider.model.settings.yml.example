@@ -1,0 +1,112 @@
+# Advanced model settings for AiderRuby
+# This file can be used with --model-settings-file
+
+# Example settings for different model providers
+
+# OpenAI models
+- name: gpt-4o
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+  accepts_settings:
+    - reasoning_effort
+    - thinking_tokens
+
+- name: o1-preview
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: false
+  use_system_prompt: false
+  accepts_settings:
+    - reasoning_effort
+
+- name: o1-mini
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: false
+  use_system_prompt: false
+  accepts_settings:
+    - reasoning_effort
+
+# Anthropic models
+- name: claude-3-5-sonnet-20241022
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+  accepts_settings:
+    - thinking_tokens
+
+- name: claude-3-5-haiku-20241022
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+  accepts_settings:
+    - thinking_tokens
+
+# Google models
+- name: gemini-1.5-pro
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+- name: gemini-1.5-flash
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+# GROQ models
+- name: llama-3.1-70b-versatile
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+- name: mixtral-8x7b-32768
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+# DeepSeek models
+- name: deepseek-chat
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+- name: deepseek-coder
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+# xAI models
+- name: grok-beta
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+# Cohere models
+- name: command-r-plus
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+- name: command-r
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
+
+- name: command-light
+  edit_format: diff
+  use_repo_map: true
+  use_temperature: true
+  use_system_prompt: true
