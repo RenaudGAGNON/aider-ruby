@@ -1,3 +1,13 @@
+require 'simplecov'
+require 'simplecov_json_formatter'
+SimpleCov.start do
+  formatter SimpleCov::Formatter::MultiFormatter.new([
+                                                       SimpleCov::Formatter::JSONFormatter,
+                                                       SimpleCov::Formatter::HTMLFormatter
+                                                     ])
+  add_filter '/spec/'
+end
+
 require 'aider_ruby'
 
 RSpec.configure do |config|

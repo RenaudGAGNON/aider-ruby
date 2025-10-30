@@ -1,0 +1,42 @@
+name: Main
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Ruby ${{ matrix.ruby }}
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        ruby:
+          - "3.1"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Run the default task
+        run: bundle exec rspec --require spec_helper
+
+      - uses: qltysh/qlty-action/coverage@v1
+        with:
+          oidc: true
+          files: coverage/coverage.json
