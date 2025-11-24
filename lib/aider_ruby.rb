@@ -6,6 +6,8 @@ end
 
 require_relative 'aider_ruby/error_handling'
 require_relative 'aider_ruby/validation'
+require_relative 'aider_ruby/constants'
+require_relative 'aider_ruby/task'
 require_relative 'aider_ruby/client'
 require_relative 'aider_ruby/config'
 require_relative 'aider_ruby/models'

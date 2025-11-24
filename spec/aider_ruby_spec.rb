@@ -553,12 +553,15 @@ RSpec.describe AiderRuby::TaskExecutor do
   end
 
   describe '#get_task' do
-    it 'returns task by ID' do
-      task = { id: 'test-task', type: :coding, status: :completed }
+    it 'returns task by ID as hash' do
+      task = AiderRuby::Task.new(type: :coding, description: 'Test', files: [])
+      task.instance_variable_set(:@id, 'test-task')
+      task.completed!('Success')
       executor.instance_variable_set(:@task_history, [task])
 
       found_task = executor.get_task('test-task')
-      expect(found_task).to eq(task)
+      expect(found_task).to be_a(Hash)
+      expect(found_task[:id]).to eq('test-task')
     end
 
     it 'returns nil for non-existent task' do
@@ -569,7 +572,8 @@ RSpec.describe AiderRuby::TaskExecutor do
 
   describe '#export_history' do
     it 'exports history as JSON string' do
-      task = { id: 'test-task', type: :coding, status: :completed }
+      task = AiderRuby::Task.new(type: :coding, description: 'Test', files: [])
+      task.completed!('Success')
       executor.instance_variable_set(:@task_history, [task])
 
       json = executor.export_history
@@ -578,7 +582,8 @@ RSpec.describe AiderRuby::TaskExecutor do
     end
 
     it 'exports history to file' do
-      task = { id: 'test-task', type: :coding, status: :completed }
+      task = AiderRuby::Task.new(type: :coding, description: 'Test', files: [])
+      task.completed!('Success')
       executor.instance_variable_set(:@task_history, [task])
 
       file = Tempfile.new(['history', '.json'])
@@ -594,14 +599,15 @@ RSpec.describe AiderRuby::TaskExecutor do
 
   describe '#import_history' do
     it 'imports history from JSON file' do
-      task = { id: 'test-task', type: 'coding', status: 'completed' }
+      task_data = { id: 'test-task', type: 'coding', status: 'completed', description: 'Test', files: [] }
 
       file = Tempfile.new(['history', '.json'])
-      File.write(file.path, JSON.generate([task]))
+      File.write(file.path, JSON.generate([task_data]))
 
       executor.import_history(file.path)
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:id]).to eq('test-task')
+      expect(executor.task_history.first).to be_a(AiderRuby::Task)
+      expect(executor.task_history.first.id).to eq('test-task')
 
       file.close
       file.unlink
