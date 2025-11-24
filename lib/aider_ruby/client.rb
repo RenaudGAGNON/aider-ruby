@@ -245,33 +245,8 @@ module AiderRuby
       # Enhanced read files method with validation and filtering
       def add_read_files(files, validate: true, extensions: nil, exclude_patterns: [])
         files = Array(files)
-        
-        # Filter files by extensions if specified
-        if extensions
-          files = files.select do |file|
-            file_ext = File.extname(file)
-            extensions.include?(file_ext)
-          end
-        end
-        
-        # Exclude files matching patterns
-        files = files.reject do |file|
-          exclude_patterns.any? do |pattern|
-            case pattern
-            when String
-              file.include?(pattern)
-            when Regexp
-              file.match?(pattern)
-            end
-          end
-        end
-        
-        # Validate files exist if requested
-        if validate
-          files.each do |file|
-            raise AiderRuby::ErrorHandling::FileError, "Read file not found: #{file}" unless File.exist?(file)
-          end
-        end
+        files = filter_files(files, extensions, exclude_patterns)
+        validate_files(files) if validate
         
         @config.read_files ||= []
         @config.read_files.concat(files)
@@ -280,34 +255,8 @@ module AiderRuby
 
       # Add read files from folder with filtering
       def add_read_files_from_folder(folder_path, extensions: nil, exclude_patterns: [], validate: true)
-        require 'find'
-        
-        files_in_folder = []
-        
-        Find.find(folder_path) do |path|
-          next if File.directory?(path)
-          
-          # Skip if file doesn't match extension filter
-          if extensions
-            file_ext = File.extname(path)
-            next unless extensions.include?(file_ext)
-          end
-          
-          # Skip if file matches exclude patterns
-          skip_file = exclude_patterns.any? do |pattern|
-            case pattern
-            when String
-              path.include?(pattern)
-            when Regexp
-              path.match?(pattern)
-            end
-          end
-          next if skip_file
-          
-          files_in_folder << path
-        end
-        
-        add_read_files(files_in_folder, validate: validate)
+        files = find_files_in_folder(folder_path, extensions, exclude_patterns)
+        add_read_files(files, validate: validate)
       end
 
       # Clear all read files
@@ -452,74 +401,77 @@ module AiderRuby
 
       # Add entire folder (recursively finds all files)
       def add_folder(folder_path, extensions: nil, exclude_patterns: [])
-        require 'find'
-        
-        files_in_folder = []
-        
-        Find.find(folder_path) do |path|
-          next if File.directory?(path)
-          
-          # Skip if file doesn't match extension filter
-          if extensions
-            file_ext = File.extname(path)
-            next unless extensions.include?(file_ext)
-          end
-          
-          # Skip if file matches exclude patterns
-          skip_file = exclude_patterns.any? do |pattern|
-            case pattern
-            when String
-              path.include?(pattern)
-            when Regexp
-              path.match?(pattern)
-            end
-          end
-          next if skip_file
-          
-          files_in_folder << path
-        end
-        
-        @files.concat(files_in_folder)
+        files = find_files_in_folder(folder_path, extensions, exclude_patterns)
+        @files.concat(files)
         self
       end
 
       # Add folder as read-only context
       def add_read_only_folder(folder_path, extensions: nil, exclude_patterns: [])
-        require 'find'
-        
-        files_in_folder = []
-        
-        Find.find(folder_path) do |path|
-          next if File.directory?(path)
-          
-          # Skip if file doesn't match extension filter
-          if extensions
-            file_ext = File.extname(path)
-            next unless extensions.include?(file_ext)
-          end
-          
-          # Skip if file matches exclude patterns
-          skip_file = exclude_patterns.any? do |pattern|
-            case pattern
-            when String
-              path.include?(pattern)
-            when Regexp
-              path.match?(pattern)
-            end
-          end
-          next if skip_file
-          
-          files_in_folder << path
-        end
-        
-        @read_only_files.concat(files_in_folder)
+        files = find_files_in_folder(folder_path, extensions, exclude_patterns)
+        @read_only_files.concat(files)
         self
       end
 
       private
 
+      def find_files_in_folder(folder_path, extensions, exclude_patterns)
+        require 'find'
+        files = []
+        
+        Find.find(folder_path) do |path|
+          next if File.directory?(path)
+          next unless matches_extension?(path, extensions)
+          next if matches_exclude_pattern?(path, exclude_patterns)
+          
+          files << path
+        end
+        
+        files
+      end
+
+      def matches_extension?(path, extensions)
+        return true unless extensions
+        extensions.include?(File.extname(path))
+      end
+
+      def matches_exclude_pattern?(path, exclude_patterns)
+        return false if exclude_patterns.empty?
+        
+        exclude_patterns.any? do |pattern|
+          case pattern
+          when String
+            path.include?(pattern)
+          when Regexp
+            path.match?(pattern)
+          end
+        end
+      end
+
+      def filter_files(files, extensions, exclude_patterns)
+        files = filter_by_extensions(files, extensions) if extensions
+        files = exclude_by_patterns(files, exclude_patterns) if exclude_patterns.any?
+        files
+      end
+
+      def filter_by_extensions(files, extensions)
+        files.select { |file| extensions.include?(File.extname(file)) }
+      end
+
+      def exclude_by_patterns(files, exclude_patterns)
+        files.reject { |file| matches_exclude_pattern?(file, exclude_patterns) }
+      end
+
+      def validate_files(files)
+        files.each do |file|
+          unless File.exist?(file)
+            raise AiderRuby::ErrorHandling::FileError, "Read file not found: #{file}"
+          end
+        end
+      end
+
       def build_command_args(options = {})
-        args = ['aider']
+        args = [Constants::AIDER_COMMAND]
 
         # Add config arguments
         args.concat(@config.to_aider_args)
@@ -552,19 +504,33 @@ module AiderRuby
       end
 
       def execute_command(args, interactive: false)
-        puts "Executing: #{args.join(' ')}" if @config.verbose
+        log_command(args) if @config.verbose
 
         if interactive
-          # For interactive mode, we need to spawn a process that keeps running
           spawn(*args)
         else
-          # For non-interactive mode, capture output
-          stdout, stderr, status = Open3.capture3(*args)
-
-          raise Error, "Aider command failed: #{stderr}" unless status.success?
-
-          stdout
+          execute_non_interactive(args)
         end
+      end
+
+      def execute_non_interactive(args)
+        stdout, stderr, status = Open3.capture3(*args)
+        
+        unless status.success?
+          raise AiderRuby::ErrorHandling::ExecutionError,
+            "Command failed with exit code #{status.exitstatus}: #{stderr}"
+        end
+        
+        stdout
+      rescue Errno::ENOENT => e
+        AiderRuby::ErrorHandling.handle_execution_error(e)
+      rescue => e
+        raise AiderRuby::ErrorHandling::ExecutionError,
+          "Unexpected error executing command: #{e.message}"
+      end
+
+      def log_command(args)
+        puts "Executing: #{args.join(' ')}"
       end
     end
   end

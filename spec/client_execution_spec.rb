@@ -322,13 +322,15 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
   let(:client) { AiderRuby::Client::Client.new }
   let(:executor) { AiderRuby::TaskExecutor.new(client) }
 
-  describe 'private #generate_task_id' do
-    it 'generates unique task IDs' do
-      id1 = executor.send(:generate_task_id)
-      id2 = executor.send(:generate_task_id)
+  describe 'Task creation' do
+    it 'creates tasks with Task class' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Success')
 
-      expect(id1).to match(/^task_\d+_\d+$/)
-      expect(id1).not_to eq(id2)
+      executor.execute_coding_task('Add new feature', ['file1.rb'])
+
+      expect(executor.task_history.length).to eq(1)
+      expect(executor.task_history.first).to be_a(AiderRuby::Task)
     end
   end
 
@@ -340,8 +342,9 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
       executor.execute_coding_task('Add new feature', ['file1.rb'])
 
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:coding)
-      expect(executor.task_history.first[:status]).to eq(:completed)
+      task = executor.task_history.first
+      expect(task.type).to eq(:coding)
+      expect(task.status).to eq(:completed)
     end
 
     it 'handles errors' do
@@ -352,8 +355,9 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
         executor.execute_coding_task('Add new feature', ['file1.rb'])
       end.to raise_error(StandardError)
 
-      expect(executor.task_history.first[:status]).to eq(:failed)
-      expect(executor.task_history.first[:error]).to eq('Execution failed')
+      task = executor.task_history.first
+      expect(task.status).to eq(:failed)
+      expect(task.error).to eq('Execution failed')
     end
   end
 
@@ -365,7 +369,17 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
       executor.execute_refactoring_task('Refactor code', ['file1.rb'])
 
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:refactoring)
+      expect(executor.task_history.first.type).to eq(:refactoring)
+    end
+
+    it 'merges refactoring-specific options' do
+      allow(client).to receive(:add_files).and_return(client)
+      expect(client).to receive(:execute).with(
+        'Refactor code',
+        hash_including(git: true, auto_commits: true, lint: true, auto_lint: true)
+      ).and_return('Success')
+
+      executor.execute_refactoring_task('Refactor code', ['file1.rb'])
     end
   end
 
@@ -377,7 +391,17 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
       executor.execute_debugging_task('Fix bug', ['file1.rb'])
 
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:debugging)
+      expect(executor.task_history.first.type).to eq(:debugging)
+    end
+
+    it 'merges debugging-specific options' do
+      allow(client).to receive(:add_files).and_return(client)
+      expect(client).to receive(:execute).with(
+        'Fix bug',
+        hash_including(verbose: true, test: true, auto_test: true, show_diffs: true)
+      ).and_return('Success')
+
+      executor.execute_debugging_task('Fix bug', ['file1.rb'])
     end
   end
 
@@ -389,7 +413,17 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
       executor.execute_documentation_task('Add docs', ['file1.rb'])
 
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:documentation)
+      expect(executor.task_history.first.type).to eq(:documentation)
+    end
+
+    it 'uses default documentation model' do
+      allow(client).to receive(:add_files).and_return(client)
+      expect(client).to receive(:execute).with(
+        'Add docs',
+        hash_including(model: AiderRuby::Constants::DEFAULT_DOC_MODEL, pretty: true)
+      ).and_return('Success')
+
+      executor.execute_documentation_task('Add docs', ['file1.rb'])
     end
   end
 
@@ -401,7 +435,17 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
       executor.execute_test_generation_task('Generate tests', ['file1.rb'])
 
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:test_generation)
+      expect(executor.task_history.first.type).to eq(:test_generation)
+    end
+
+    it 'uses default test command' do
+      allow(client).to receive(:add_files).and_return(client)
+      expect(client).to receive(:execute).with(
+        'Generate tests',
+        hash_including(test: true, auto_test: true, test_cmd: AiderRuby::Constants::DEFAULT_TEST_CMD)
+      ).and_return('Success')
+
+      executor.execute_test_generation_task('Generate tests', ['file1.rb'])
     end
   end
 
@@ -419,7 +463,18 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
 
       expect(results).to be_an(Array)
       expect(executor.task_history.length).to eq(1)
-      expect(executor.task_history.first[:type]).to eq(:multi_step)
+      expect(executor.task_history.first.type).to eq(:multi_step)
+    end
+
+    it 'handles string steps' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Step 1 done', 'Step 2 done')
+
+      steps = ['Step 1', 'Step 2']
+      results = executor.execute_multi_step_task(steps, ['file1.rb'])
+
+      expect(results).to be_an(Array)
+      expect(results.length).to eq(2)
     end
 
     it 'handles errors in multi-step tasks' do
@@ -435,7 +490,72 @@ RSpec.describe 'AiderRuby::TaskExecutor Task Methods' do
         executor.execute_multi_step_task(steps, ['file1.rb'])
       end.to raise_error(StandardError)
 
-      expect(executor.task_history.first[:status]).to eq(:failed)
+      expect(executor.task_history.first.status).to eq(:failed)
+    end
+  end
+
+  describe '#get_task_history' do
+    it 'returns tasks as hashes' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Success')
+
+      executor.execute_coding_task('Task 1', [])
+      executor.execute_refactoring_task('Task 2', [])
+
+      history = executor.get_task_history
+      expect(history).to be_an(Array)
+      expect(history.first).to be_a(Hash)
+      expect(history.first[:type]).to eq(:coding)
+    end
+
+    it 'filters by type' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Success')
+
+      executor.execute_coding_task('Task 1', [])
+      executor.execute_refactoring_task('Task 2', [])
+
+      history = executor.get_task_history(type: :coding)
+      expect(history.length).to eq(1)
+      expect(history.first[:type]).to eq(:coding)
+    end
+  end
+
+  describe '#get_task' do
+    it 'returns task as hash by ID' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Success')
+
+      executor.execute_coding_task('Task 1', [])
+      task_id = executor.task_history.first.id
+
+      task = executor.get_task(task_id)
+      expect(task).to be_a(Hash)
+      expect(task[:id]).to eq(task_id)
+    end
+  end
+
+  describe '#export_history and #import_history' do
+    it 'exports and imports task history' do
+      allow(client).to receive(:add_files).and_return(client)
+      allow(client).to receive(:execute).and_return('Success')
+
+      executor.execute_coding_task('Task 1', [])
+      executor.execute_refactoring_task('Task 2', [])
+
+      file = Tempfile.new(['history', '.json'])
+      executor.export_history(file.path)
+
+      new_executor = AiderRuby::TaskExecutor.new(client)
+      new_executor.import_history(file.path)
+
+      expect(new_executor.task_history.length).to eq(2)
+      # JSON parsing converts symbols to strings, so we check the string version
+      expect(new_executor.task_history.first.type.to_s).to eq('coding')
+      expect(new_executor.task_history.last.type.to_s).to eq('refactoring')
+
+      file.close
+      file.unlink
     end
   end
 end
